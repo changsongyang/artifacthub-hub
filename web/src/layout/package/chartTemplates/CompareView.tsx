@@ -1,0 +1,140 @@
+import { differenceBy, isNull, sortBy } from 'lodash';
+import { useEffect, useRef, useState } from 'react';
+
+import API from '../../../api';
+import { ChartTemplate, CompareChartTemplate, CompareChartTemplateStatus } from '../../../types';
+import ErrorBoundary from '../../common/ErrorBoundary';
+import Loading from '../../common/Loading';
+import CompareTemplatesList from './CompareTemplatesList';
+import styles from './CompareView.module.css';
+import DiffTemplate from './DiffTemplate';
+
+interface Props {
+  packageId: string;
+  templates: ChartTemplate[] | null;
+  currentVersion: string;
+  visibleTemplate?: string;
+  comparedVersion: string;
+  formatTemplates: (templates: ChartTemplate[]) => ChartTemplate[];
+}
+
+const CompareView = (props: Props) => {
+  const tmplWrapper = useRef<HTMLPreElement>(null);
+  const [diffTemplates, setDiffTemplates] = useState<ChartTemplate[] | null | undefined>();
+  const [activeTemplate, setActiveTemplate] = useState<CompareChartTemplate | null>(null);
+  const [isChangingTemplate, setIsChangingTemplate] = useState<boolean>(false);
+  const [visibleTemplates, setVisibleTemplates] = useState<CompareChartTemplate[]>([]);
+
+  const onTemplateChange = (template: CompareChartTemplate | null) => {
+    setIsChangingTemplate(true);
+    setActiveTemplate(template);
+    // updateUrl(template ? template.name : undefined);
+    if (!isNull(template)) {
+      if (tmplWrapper && tmplWrapper.current) {
+        tmplWrapper.current.scroll(0, 0);
+      }
+    }
+  };
+
+  useEffect(() => {
+    async function getDiffCompareChartTemplates(version: string) {
+      try {
+        setIsChangingTemplate(true);
+        const data = await API.getChartTemplates(props.packageId, version);
+        if (data && data.templates) {
+          const formattedTemplates: ChartTemplate[] = props.formatTemplates(data.templates);
+          if (formattedTemplates.length > 0) {
+            setDiffTemplates(formattedTemplates);
+          } else {
+            setDiffTemplates(null);
+          }
+        }
+        if (tmplWrapper && tmplWrapper.current) {
+          tmplWrapper.current.scroll(0, 0);
+        }
+      } catch {
+        setDiffTemplates(null);
+      }
+    }
+
+    if (props.comparedVersion !== '') {
+      getDiffCompareChartTemplates(props.comparedVersion);
+    } else {
+      setDiffTemplates(null);
+    }
+  }, [props.comparedVersion]); /* eslint-disable-line react-hooks/exhaustive-deps */
+
+  useEffect(() => {
+    const prepareVisibleTemplates = () => {
+      let tmpls: CompareChartTemplate[] = [];
+      props.templates!.forEach((tmpl: ChartTemplate) => {
+        const diffTmpl = diffTemplates!.find((t: ChartTemplate) => t.name === tmpl.name);
+        if (diffTmpl) {
+          if (diffTmpl.data !== tmpl.data) {
+            tmpls.push({ ...tmpl, compareData: diffTmpl.data });
+          }
+        } else {
+          tmpls.push({
+            ...tmpl,
+            compareData: '',
+            status: CompareChartTemplateStatus.Added,
+          });
+        }
+      });
+      const others = differenceBy(diffTemplates!, props.templates!, 'name');
+      others.forEach((tmpl: ChartTemplate) => {
+        tmpls.push({
+          ...tmpl,
+          data: '',
+          compareData: tmpl.data,
+          status: CompareChartTemplateStatus.Deleted,
+        });
+      });
+      const sortedTmpls: CompareChartTemplate[] = sortBy(tmpls, 'type');
+      setVisibleTemplates(sortedTmpls);
+      setActiveTemplate(sortedTmpls[0]);
+    };
+
+    if (diffTemplates && !isNull(props.templates)) {
+      prepareVisibleTemplates();
+    }
+  }, [diffTemplates]); /* eslint-disable-line react-hooks/exhaustive-deps */
+
+  return (
+    <div className="d-flex flex-row align-items-stretch g-0 h-100 mh-100">
+      <div className="col-3 h-100">
+        <CompareTemplatesList
+          templates={visibleTemplates}
+          activeTemplateName={activeTemplate ? activeTemplate.name : undefined}
+          onTemplateChange={onTemplateChange}
+        />
+      </div>
+
+      <div className="col-9 ps-3 h-100">
+        <div className={`position-relative h-100 mh-100 border ${styles.templateWrapper}`}>
+          {isChangingTemplate && <Loading />}
+
+          <pre
+            ref={tmplWrapper}
+            className={`text-muted h-100 mh-100 mb-0 overflow-auto position-relative ${styles.pre}`}
+          >
+            {activeTemplate && (
+              <ErrorBoundary className={styles.errorAlert} message="Something went wrong rendering the template.">
+                <>
+                  <DiffTemplate
+                    currentVersion={props.currentVersion}
+                    diffVersion={props.comparedVersion}
+                    template={activeTemplate!}
+                    setIsChangingTemplate={setIsChangingTemplate}
+                  />
+                </>
+              </ErrorBoundary>
+            )}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CompareView;

@@ -1,0 +1,16 @@
+:global(.diff) {
+  table-layout: auto;
+}
+
+:global(.diff-gutter) {
+  cursor: auto;
+}
+
+:global(.diff-code) {
+  white-space: pre;
+  padding-right: 2rem;
+}
+
+.newLine {
+  margin-left: 110px;
+}
