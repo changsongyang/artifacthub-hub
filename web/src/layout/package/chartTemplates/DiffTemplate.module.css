@@ -1,4 +1,5 @@
-:global(.diff), .table {
+:global(.diff),
+.table {
   table-layout: auto;
 }
 
