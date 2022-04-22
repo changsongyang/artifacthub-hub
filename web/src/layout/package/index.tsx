@@ -87,6 +87,7 @@ interface Props {
   visibleSection?: string;
   eventId?: string;
   visibleTemplate?: string;
+  compareVersionTo?: string;
   visibleFile?: string;
   visibleVersion?: string;
 }
@@ -826,6 +827,11 @@ const PackageView = (props: Props) => {
                               visibleTemplate={
                                 !isUndefined(props.visibleModal) && props.visibleModal === 'template'
                                   ? props.visibleTemplate
+                                  : undefined
+                              }
+                              compareVersionTo={
+                                !isUndefined(props.visibleModal) && props.visibleModal === 'template'
+                                  ? props.compareVersionTo
                                   : undefined
                               }
                               searchUrlReferer={props.searchUrlReferer}

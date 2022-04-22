@@ -1,7 +1,7 @@
 import { isNull } from 'lodash';
 import { useEffect, useRef, useState } from 'react';
 
-import { ChartTemplate } from '../../../types';
+import { ChartTemplate, TemplatesQuery } from '../../../types';
 import BlockCodeButtons from '../../common/BlockCodeButtons';
 import ErrorBoundary from '../../common/ErrorBoundary';
 import Loading from '../../common/Loading';
@@ -14,7 +14,7 @@ interface Props {
   values?: any;
   normalizedName: string;
   visibleTemplate?: string;
-  updateUrl: (templateName?: string) => void;
+  updateUrl: (q: TemplatesQuery) => void;
 }
 
 const TemplatesView = (props: Props) => {
@@ -25,7 +25,7 @@ const TemplatesView = (props: Props) => {
   const onTemplateChange = (template: ChartTemplate | null) => {
     setIsChangingTemplate(true);
     setActiveTemplate(template);
-    props.updateUrl(template ? template.name : undefined);
+    props.updateUrl({ template: template ? template.name : undefined });
     if (!isNull(template)) {
       if (tmplWrapper && tmplWrapper.current) {
         tmplWrapper.current.scroll(0, 0);
@@ -39,10 +39,10 @@ const TemplatesView = (props: Props) => {
       if (props.visibleTemplate) {
         activeTmpl = props.templates.find((tmpl: ChartTemplate) => tmpl.name === props.visibleTemplate);
         if (!activeTmpl) {
-          props.updateUrl(props.templates[0].name);
+          props.updateUrl({ template: props.templates[0].name });
         }
       } else {
-        props.updateUrl(props.templates[0].name);
+        props.updateUrl({ template: props.templates[0].name });
       }
       setActiveTemplate(activeTmpl || props.templates[0]);
     }

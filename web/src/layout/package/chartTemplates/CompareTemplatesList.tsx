@@ -7,7 +7,7 @@ import { ChartTmplTypeFile, CompareChartTemplate, CompareChartTemplateStatus } f
 import styles from './TemplatesList.module.css';
 
 interface Props {
-  templates: CompareChartTemplate[] | null;
+  templates?: CompareChartTemplate[] | null;
   activeTemplateName?: string;
   onTemplateChange: (template: CompareChartTemplate | null) => void;
 }
@@ -51,7 +51,7 @@ const CompareTemplatesList = (props: Props) => {
 
     if (inputValue === '') {
       setVisibleTemplates(props.templates || []);
-      if (isUndefined(props.activeTemplateName) && !isNull(props.templates)) {
+      if (isUndefined(props.activeTemplateName) && props.templates) {
         props.onTemplateChange(props.templates[0]);
       }
     } else {
@@ -61,7 +61,7 @@ const CompareTemplatesList = (props: Props) => {
     }
   }, [inputValue, props.templates]); /* eslint-disable-line react-hooks/exhaustive-deps */
 
-  if (isNull(props.templates)) return null;
+  if (isNull(props.templates) || isUndefined(props.templates)) return null;
   return (
     <div className="h-100 d-flex flex-column overflow-auto pe-2">
       <div className="position-relative w-100">

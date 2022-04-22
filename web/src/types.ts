@@ -741,3 +741,8 @@ export interface ContainerTag {
   mutable: boolean;
   id?: string;
 }
+
+export interface TemplatesQuery {
+  template?: string;
+  compareTo?: string;
+}

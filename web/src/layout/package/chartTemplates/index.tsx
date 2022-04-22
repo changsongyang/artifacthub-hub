@@ -11,6 +11,7 @@ import {
   ErrorKind,
   RepositoryKind,
   SearchFiltersURL,
+  TemplatesQuery,
   Version as VersionData,
 } from '../../../types';
 import alertDispatcher from '../../../utils/alertDispatcher';
@@ -27,6 +28,7 @@ interface Props {
   repoKind: RepositoryKind;
   visibleChartTemplates: boolean;
   visibleTemplate?: string;
+  compareVersionTo?: string;
   searchUrlReferer?: SearchFiltersURL;
   fromStarredPage?: boolean;
 }
@@ -99,8 +101,8 @@ const ChartTemplatesModal = (props: Props) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [currentPkgId, setCurrentPkgId] = useState<string>(props.packageId);
   const [currentVersion, setCurrentVersion] = useState<string>(props.version);
-  const [enabledDiff, setEnabledDiff] = useState<boolean>(false);
-  const [comparedVersion, setComparedVersion] = useState<string>('');
+  const [enabledDiff, setEnabledDiff] = useState<boolean>(!isUndefined(props.compareVersionTo));
+  const [comparedVersion, setComparedVersion] = useState<string>(props.compareVersionTo || '');
 
   const cleanUrl = () => {
     history.replace({
@@ -109,9 +111,11 @@ const ChartTemplatesModal = (props: Props) => {
     });
   };
 
-  const updateUrl = (templateName?: string) => {
+  const updateUrl = (q: TemplatesQuery) => {
     history.replace({
-      search: `?modal=template${templateName ? `&template=${templateName}` : ''}`,
+      search: `?modal=template${q.template ? `&template=${q.template}` : ''}${
+        q.compareTo ? `&compare-to=${q.compareTo}` : ''
+      }`,
       state: { searchUrlReferer: props.searchUrlReferer, fromStarredPage: props.fromStarredPage },
     });
   };
@@ -188,7 +192,7 @@ const ChartTemplatesModal = (props: Props) => {
   const onOpenModal = () => {
     if (templates && props.packageId === currentPkgId && props.version === currentVersion) {
       setOpenStatus(true);
-      updateUrl(templates[0].name);
+      updateUrl({ template: templates[0].name });
     } else {
       getChartTemplates();
     }
@@ -251,7 +255,10 @@ const ChartTemplatesModal = (props: Props) => {
                         );
                         if (initialVersion) {
                           setComparedVersion(initialVersion.version);
+                          updateUrl({ template: props.visibleTemplate, compareTo: initialVersion.version });
                         }
+                      } else {
+                        updateUrl({ template: props.visibleTemplate });
                       }
                       setEnabledDiff(!enabledDiff);
                     }}
@@ -266,6 +273,7 @@ const ChartTemplatesModal = (props: Props) => {
                     value={comparedVersion}
                     onChange={(event: ChangeEvent<HTMLSelectElement>) => {
                       setComparedVersion(event.target.value);
+                      updateUrl({ template: props.visibleTemplate, compareTo: event.target.value });
                     }}
                     disabled={!enabledDiff}
                   >
@@ -318,6 +326,7 @@ const ChartTemplatesModal = (props: Props) => {
                     packageId={props.packageId}
                     templates={templates}
                     currentVersion={props.version}
+                    updateUrl={updateUrl}
                     comparedVersion={comparedVersion}
                     visibleTemplate={props.visibleTemplate}
                     formatTemplates={formatTemplates}

@@ -2,7 +2,7 @@ import { differenceBy, isNull, sortBy } from 'lodash';
 import { useEffect, useRef, useState } from 'react';
 
 import API from '../../../api';
-import { ChartTemplate, CompareChartTemplate, CompareChartTemplateStatus } from '../../../types';
+import { ChartTemplate, CompareChartTemplate, CompareChartTemplateStatus, TemplatesQuery } from '../../../types';
 import ErrorBoundary from '../../common/ErrorBoundary';
 import Loading from '../../common/Loading';
 import CompareTemplatesList from './CompareTemplatesList';
@@ -16,6 +16,7 @@ interface Props {
   visibleTemplate?: string;
   comparedVersion: string;
   formatTemplates: (templates: ChartTemplate[]) => ChartTemplate[];
+  updateUrl: (q: TemplatesQuery) => void;
 }
 
 const CompareView = (props: Props) => {
@@ -23,12 +24,13 @@ const CompareView = (props: Props) => {
   const [diffTemplates, setDiffTemplates] = useState<ChartTemplate[] | null | undefined>();
   const [activeTemplate, setActiveTemplate] = useState<CompareChartTemplate | null>(null);
   const [isChangingTemplate, setIsChangingTemplate] = useState<boolean>(false);
-  const [visibleTemplates, setVisibleTemplates] = useState<CompareChartTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [visibleTemplates, setVisibleTemplates] = useState<CompareChartTemplate[] | undefined>();
 
   const onTemplateChange = (template: CompareChartTemplate | null) => {
     setIsChangingTemplate(true);
     setActiveTemplate(template);
-    // updateUrl(template ? template.name : undefined);
+    props.updateUrl({ template: template ? template.name : undefined, compareTo: props.comparedVersion });
     if (!isNull(template)) {
       if (tmplWrapper && tmplWrapper.current) {
         tmplWrapper.current.scroll(0, 0);
@@ -40,13 +42,14 @@ const CompareView = (props: Props) => {
     async function getDiffCompareChartTemplates(version: string) {
       try {
         setIsChangingTemplate(true);
+        setIsLoading(true);
         const data = await API.getChartTemplates(props.packageId, version);
         if (data && data.templates) {
           const formattedTemplates: ChartTemplate[] = props.formatTemplates(data.templates);
           if (formattedTemplates.length > 0) {
             setDiffTemplates(formattedTemplates);
           } else {
-            setDiffTemplates(null);
+            setDiffTemplates([]);
           }
         }
         if (tmplWrapper && tmplWrapper.current) {
@@ -54,13 +57,16 @@ const CompareView = (props: Props) => {
         }
       } catch {
         setDiffTemplates(null);
+        setIsChangingTemplate(false);
+      } finally {
+        setIsLoading(false);
       }
     }
 
     if (props.comparedVersion !== '') {
       getDiffCompareChartTemplates(props.comparedVersion);
     } else {
-      setDiffTemplates(null);
+      setDiffTemplates([]);
     }
   }, [props.comparedVersion]); /* eslint-disable-line react-hooks/exhaustive-deps */
 
@@ -76,7 +82,8 @@ const CompareView = (props: Props) => {
         } else {
           tmpls.push({
             ...tmpl,
-            compareData: '',
+            data: '',
+            compareData: tmpl.data,
             status: CompareChartTemplateStatus.Added,
           });
         }
@@ -85,18 +92,23 @@ const CompareView = (props: Props) => {
       others.forEach((tmpl: ChartTemplate) => {
         tmpls.push({
           ...tmpl,
-          data: '',
-          compareData: tmpl.data,
+          data: tmpl.data,
+          compareData: '',
           status: CompareChartTemplateStatus.Deleted,
         });
       });
       const sortedTmpls: CompareChartTemplate[] = sortBy(tmpls, 'type');
       setVisibleTemplates(sortedTmpls);
-      setActiveTemplate(sortedTmpls[0]);
+      if (sortedTmpls.length === 0) {
+        setActiveTemplate(null);
+      } else {
+        setActiveTemplate(sortedTmpls[0]);
+      }
     };
 
     if (diffTemplates && !isNull(props.templates)) {
       prepareVisibleTemplates();
+      setIsChangingTemplate(false);
     }
   }, [diffTemplates]); /* eslint-disable-line react-hooks/exhaustive-deps */
 
@@ -112,7 +124,7 @@ const CompareView = (props: Props) => {
 
       <div className="col-9 ps-3 h-100">
         <div className={`position-relative h-100 mh-100 border ${styles.templateWrapper}`}>
-          {isChangingTemplate && <Loading />}
+          {((isChangingTemplate && activeTemplate) || isLoading) && <Loading />}
 
           <pre
             ref={tmplWrapper}
