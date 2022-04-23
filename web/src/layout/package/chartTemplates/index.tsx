@@ -1,10 +1,13 @@
-import { compact, find, isUndefined, uniq } from 'lodash';
-import { ChangeEvent, useEffect, useState } from 'react';
+import classnames from 'classnames';
+import { compact, isUndefined, uniq } from 'lodash';
+import { useEffect, useRef, useState } from 'react';
+import { GoCheck } from 'react-icons/go';
 import { ImInsertTemplate } from 'react-icons/im';
 import { MdClose } from 'react-icons/md';
 import { useHistory } from 'react-router-dom';
 
 import API from '../../../api';
+import useOutsideClick from '../../../hooks/useOutsideClick';
 import {
   ChartTemplate,
   ChartTmplTypeFile,
@@ -103,6 +106,9 @@ const ChartTemplatesModal = (props: Props) => {
   const [currentVersion, setCurrentVersion] = useState<string>(props.version);
   const [enabledDiff, setEnabledDiff] = useState<boolean>(!isUndefined(props.compareVersionTo));
   const [comparedVersion, setComparedVersion] = useState<string>(props.compareVersionTo || '');
+  const [visibleDropdown, setVisibleDropdown] = useState<boolean>(false);
+  const ref = useRef(null);
+  useOutsideClick([ref], visibleDropdown, () => setVisibleDropdown(false));
 
   const cleanUrl = () => {
     history.replace({
@@ -118,6 +124,13 @@ const ChartTemplatesModal = (props: Props) => {
       }`,
       state: { searchUrlReferer: props.searchUrlReferer, fromStarredPage: props.fromStarredPage },
     });
+  };
+
+  const onVersionChange = (version: string) => {
+    setComparedVersion(version);
+    updateUrl({ template: props.visibleTemplate, compareTo: version });
+    setVisibleDropdown(false);
+    setEnabledDiff(true);
   };
 
   useEffect(() => {
@@ -237,55 +250,80 @@ const ChartTemplatesModal = (props: Props) => {
           modalDialogClassName={styles.modalDialog}
           modalClassName="h-100"
           header={
-            <div className="d-flex flex-row flex-grow-1">
+            <div className="d-flex flex-row align-items-center flex-grow-1">
               <div className={`h3 m-2 flex-grow-1 ${styles.title}`}>Templates</div>
-              <div className={`d-flex flex-row align-items-baseline justify-content-between pe-3 ${styles.diffLine}`}>
-                <div className="d-flex flex-row form-check form-switch mt-3 me-3">
-                  <label className={`form-check-label fw-bold text-nowrap ${styles.label}`}>Compare mode</label>
-                  <input
-                    type="checkbox"
-                    className="form-check-input ms-2"
-                    role="switch"
-                    value="true"
-                    onChange={() => {
-                      if (!enabledDiff) {
-                        const initialVersion = find(
-                          props.sortedVersions,
-                          (v: VersionData) => v.version !== props.version
-                        );
-                        if (initialVersion) {
-                          setComparedVersion(initialVersion.version);
-                          updateUrl({ template: props.visibleTemplate, compareTo: initialVersion.version });
-                        }
-                      } else {
-                        updateUrl({ template: props.visibleTemplate });
-                      }
-                      setEnabledDiff(!enabledDiff);
-                    }}
-                    checked={enabledDiff}
-                  />
-                </div>
-
-                <div className={styles.selectWrapper}>
-                  <select
-                    className="form-select form-select-sm"
-                    aria-label="version-select"
-                    value={comparedVersion}
-                    onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-                      setComparedVersion(event.target.value);
-                      updateUrl({ template: props.visibleTemplate, compareTo: event.target.value });
-                    }}
-                    disabled={!enabledDiff}
+              <div className="mx-4">
+                <div className="btn-group" role="group">
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary btn-sm dropdown-toggle"
+                    onClick={() => setVisibleDropdown(!visibleDropdown)}
                   >
-                    {props.sortedVersions.map((v: VersionData) => {
-                      if (v.version === props.version) return null;
-                      return (
-                        <option key={`opt_${v.version}`} value={v.version}>
-                          {v.version}
-                        </option>
-                      );
-                    })}
-                  </select>
+                    <span className="pe-2">
+                      {enabledDiff ? (
+                        <span>
+                          Comparing to version:
+                          <span className="fw-bold ps-2">{comparedVersion}</span>
+                        </span>
+                      ) : (
+                        'Compare to version ...'
+                      )}
+                    </span>
+                  </button>
+                  <div
+                    ref={ref}
+                    role="complementary"
+                    className={classnames(
+                      'dropdown-menu dropdown-menu-end text-nowrap overflow-hidden',
+                      styles.dropdown,
+                      {
+                        show: visibleDropdown,
+                      }
+                    )}
+                  >
+                    {enabledDiff && (
+                      <>
+                        <button
+                          type="button"
+                          className="dropdown-item"
+                          onClick={() => {
+                            setVisibleDropdown(false);
+                            setEnabledDiff(false);
+                            setComparedVersion('');
+                          }}
+                        >
+                          <div className="d-flex flex-row align-items-center">
+                            <MdClose />
+                            <div className="ms-2">Exit compare mode</div>
+                          </div>
+                        </button>
+
+                        <div className="dropdown-divider mb-0" />
+                      </>
+                    )}
+
+                    <div
+                      className={classnames('overflow-scroll h-100', { [`pt-2 ${styles.versionsList}`]: enabledDiff })}
+                    >
+                      {props.sortedVersions.map((v: VersionData) => {
+                        if (v.version === props.version) return null;
+                        return (
+                          <button
+                            key={`opt_${v.version}`}
+                            className="dropdown-item"
+                            onClick={() => onVersionChange(v.version)}
+                          >
+                            <div className="d-flex flex-row align-items-center">
+                              <div className={styles.itemIcon}>
+                                {v.version === comparedVersion && <GoCheck className="text-success" />}
+                              </div>
+                              <div className="text-truncate">{v.version}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

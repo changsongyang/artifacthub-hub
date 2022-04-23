@@ -1,5 +1,6 @@
 import { differenceBy, isNull, sortBy } from 'lodash';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { BsArrowsCollapse, BsArrowsExpand } from 'react-icons/bs';
 
 import API from '../../../api';
 import { ChartTemplate, CompareChartTemplate, CompareChartTemplateStatus, TemplatesQuery } from '../../../types';
@@ -20,22 +21,17 @@ interface Props {
 }
 
 const CompareView = (props: Props) => {
-  const tmplWrapper = useRef<HTMLPreElement>(null);
   const [diffTemplates, setDiffTemplates] = useState<ChartTemplate[] | null | undefined>();
   const [activeTemplate, setActiveTemplate] = useState<CompareChartTemplate | null>(null);
   const [isChangingTemplate, setIsChangingTemplate] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [visibleTemplates, setVisibleTemplates] = useState<CompareChartTemplate[] | undefined>();
+  const [expanded, setExpanded] = useState<boolean>(false);
 
   const onTemplateChange = (template: CompareChartTemplate | null) => {
     setIsChangingTemplate(true);
     setActiveTemplate(template);
     props.updateUrl({ template: template ? template.name : undefined, compareTo: props.comparedVersion });
-    if (!isNull(template)) {
-      if (tmplWrapper && tmplWrapper.current) {
-        tmplWrapper.current.scroll(0, 0);
-      }
-    }
   };
 
   useEffect(() => {
@@ -51,9 +47,6 @@ const CompareView = (props: Props) => {
           } else {
             setDiffTemplates([]);
           }
-        }
-        if (tmplWrapper && tmplWrapper.current) {
-          tmplWrapper.current.scroll(0, 0);
         }
       } catch {
         setDiffTemplates(null);
@@ -77,7 +70,7 @@ const CompareView = (props: Props) => {
         const diffTmpl = diffTemplates!.find((t: ChartTemplate) => t.name === tmpl.name);
         if (diffTmpl) {
           if (diffTmpl.data !== tmpl.data) {
-            tmpls.push({ ...tmpl, compareData: diffTmpl.data });
+            tmpls.push({ ...tmpl, compareData: diffTmpl.data, status: CompareChartTemplateStatus.Modified });
           }
         } else {
           tmpls.push({
@@ -125,21 +118,30 @@ const CompareView = (props: Props) => {
       <div className="col-9 ps-3 h-100">
         <div className={`position-relative h-100 mh-100 border ${styles.templateWrapper}`}>
           {((isChangingTemplate && activeTemplate) || isLoading) && <Loading />}
+          <div className={`position-absolute d-flex ${styles.wrapper}`}>
+            <div className="position-relative">
+              <button
+                className={`btn btn-sm btn-primary rounded-circle fs-5 ${styles.btn}`}
+                onClick={() => {
+                  setExpanded(!expanded);
+                }}
+                aria-label={`${expanded ? 'Collapse' : 'Expand'} code`}
+              >
+                {expanded ? <BsArrowsCollapse /> : <BsArrowsExpand />}
+              </button>
+            </div>
+          </div>
 
-          <pre
-            ref={tmplWrapper}
-            className={`text-muted h-100 mh-100 mb-0 overflow-auto position-relative ${styles.pre}`}
-          >
+          <pre className={`text-muted h-100 mh-100 mb-0 overflow-hidden position-relative ${styles.pre}`}>
             {activeTemplate && (
               <ErrorBoundary className={styles.errorAlert} message="Something went wrong rendering the template.">
-                <>
-                  <DiffTemplate
-                    currentVersion={props.currentVersion}
-                    diffVersion={props.comparedVersion}
-                    template={activeTemplate!}
-                    setIsChangingTemplate={setIsChangingTemplate}
-                  />
-                </>
+                <DiffTemplate
+                  currentVersion={props.currentVersion}
+                  diffVersion={props.comparedVersion}
+                  template={activeTemplate!}
+                  expanded={expanded}
+                  setIsChangingTemplate={setIsChangingTemplate}
+                />
               </ErrorBoundary>
             )}
           </pre>

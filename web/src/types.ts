@@ -668,7 +668,7 @@ export interface CompareChartTemplate {
   type: ChartTmplTypeFile;
   data: string;
   compareData: string;
-  status?: CompareChartTemplateStatus;
+  status: CompareChartTemplateStatus;
 }
 
 export enum ChartTmplTypeFile {
@@ -679,6 +679,7 @@ export enum ChartTmplTypeFile {
 export enum CompareChartTemplateStatus {
   Added = 'added',
   Deleted = 'deleted',
+  Modified = 'modified',
 }
 
 export enum ChartTemplateSpecialType {

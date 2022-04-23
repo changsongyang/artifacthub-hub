@@ -23,10 +23,14 @@ jest.mock('react-router-dom', () => ({
   }),
 }));
 
+const itemScrollMock = jest.fn();
+Object.defineProperty(HTMLElement.prototype, 'scroll', { configurable: true, value: itemScrollMock });
+
 const defaultProps = {
   normalizedName: 'pkg',
   packageId: 'id',
   version: '1.1.1',
+  sortedVersions: [{ version: '1.1.1' }, { version: '1.1.0' }, { version: '1.0.1' }, { version: '1.0.0' }],
   repoKind: RepositoryKind.Helm,
   visibleChartTemplates: false,
 };

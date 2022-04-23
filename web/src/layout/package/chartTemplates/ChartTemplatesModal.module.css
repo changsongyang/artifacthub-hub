@@ -11,6 +11,25 @@
   width: 120px;
 }
 
+.itemIcon {
+  width: 1.5rem;
+}
+
+.dropdown {
+  margin-top: 2.35rem;
+  width: 14rem;
+  height: 17rem;
+  font-size: 0.9rem;
+}
+
+.removeVersionBtn {
+  border-left: 1px solid var(--bs-white) !important;
+}
+
+.versionsList {
+  max-height: calc(100% - 40px);
+}
+
 @media only screen and (max-width: 767.98px) {
   .title {
     font-size: 1.25rem;

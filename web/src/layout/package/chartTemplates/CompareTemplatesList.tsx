@@ -2,9 +2,11 @@ import classnames from 'classnames';
 import { isNull, isUndefined } from 'lodash';
 import { ChangeEvent, useEffect, useState } from 'react';
 import { FaSearch } from 'react-icons/fa';
+import { GoDiffAdded, GoDiffModified, GoDiffRemoved } from 'react-icons/go';
 
 import { ChartTmplTypeFile, CompareChartTemplate, CompareChartTemplateStatus } from '../../../types';
-import styles from './TemplatesList.module.css';
+import styles from './CompareTemplatesList.module.css';
+import ResourceLabel from './ResourceLabel';
 
 interface Props {
   templates?: CompareChartTemplate[] | null;
@@ -23,11 +25,42 @@ const CompareTemplatesList = (props: Props) => {
     setInputValue(e.target.value);
   };
 
+  const getStatusIcon = (status: CompareChartTemplateStatus): JSX.Element => {
+    return (
+      <>
+        {(() => {
+          switch (status) {
+            case CompareChartTemplateStatus.Deleted:
+              return (
+                <div className="text-danger">
+                  <GoDiffRemoved />
+                </div>
+              );
+            case CompareChartTemplateStatus.Added:
+              return (
+                <span className="text-success">
+                  <GoDiffAdded />
+                </span>
+              );
+            case CompareChartTemplateStatus.Modified:
+              return (
+                <span className={styles.modifiedIcon}>
+                  <GoDiffModified />
+                </span>
+              );
+            default:
+              return null;
+          }
+        })()}
+      </>
+    );
+  };
+
   useEffect(() => {
     const getVisibleTemplates = (): CompareChartTemplate[] => {
       const tmpls = props.templates || [];
       return tmpls.filter((tmpl: CompareChartTemplate) => {
-        const term = tmpl.name.toLowerCase();
+        const term = `${tmpl.name} ${tmpl.resourceKinds ? tmpl.resourceKinds.join(' ') : ''}`.toLowerCase();
         return term.includes(inputValue.toLowerCase());
       });
     };
@@ -119,6 +152,25 @@ const CompareTemplatesList = (props: Props) => {
                                   <small className="text-muted text-uppercase">Template:</small>
                                 </div>
                                 <div className={`text-truncate ${styles.templateName}`}>{template.name}</div>
+                                <div className="ps-2 ms-auto">{getStatusIcon(template.status)}</div>
+                              </div>
+                              <div className="d-flex flex-row mb-1">
+                                <div className={styles.legend}>
+                                  <small className="text-muted text-uppercase">Resource:</small>
+                                </div>
+                                {template.resourceKinds && template.resourceKinds.length > 0 ? (
+                                  <>
+                                    {template.resourceKinds.length > 1 ? (
+                                      <>
+                                        <ResourceLabel text="Multiple kinds" />
+                                      </>
+                                    ) : (
+                                      <ResourceLabel text={template.resourceKinds[0]} />
+                                    )}
+                                  </>
+                                ) : (
+                                  <>-</>
+                                )}
                               </div>
                             </>
                           );
@@ -129,24 +181,11 @@ const CompareTemplatesList = (props: Props) => {
                                 <small className="text-muted text-uppercase">Helper:</small>
                               </div>
                               <div className={`text-truncate ${styles.templateName}`}>{template.name}</div>
+                              <div className="ps-2 ms-auto">{getStatusIcon(template.status)}</div>
                             </div>
                           );
                       }
                     })()}
-                    {template.status && (
-                      <div className="d-flex flex-row mb-1">
-                        {(() => {
-                          switch (template.status) {
-                            case CompareChartTemplateStatus.Deleted:
-                              return <div className="badge bg-danger">Deleted</div>;
-                            case CompareChartTemplateStatus.Added:
-                              return <span className="badge bg-success">Added</span>;
-                            default:
-                              return null;
-                          }
-                        })()}
-                      </div>
-                    )}
                   </div>
                 </button>
               </div>
